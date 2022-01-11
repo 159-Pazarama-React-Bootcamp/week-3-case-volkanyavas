@@ -3,6 +3,7 @@ import {makeStyles} from "@mui/styles";
 import {useLocation} from "react-router-dom";
 import validator from 'validator';
 import axios from 'axios'
+import {useNavigate} from 'react-router-dom'
 
 
 const useStyle = makeStyles({       //sayfa csslerini mui üzerinden yapamamı sağlayıyor.
@@ -48,33 +49,44 @@ const useStyle = makeStyles({       //sayfa csslerini mui üzerinden yapamamı s
 })
 
 function LoginForm() {
+    const navigate = useNavigate()
     const classes = useStyle()                  //yazdığımız cssleri gerekli yerlere tanımlamak için değişkene atıyoruz
     const location = useLocation()              //Hangi url de olduğumuzu bulmamızı sağlıyor.
-    const [password,setPassword]= useState('')
-    const [data,setData] = useState({
-        email:'',
-        password:'',
-        name:'',
-        lastName:''
+    const [password, setPassword] = useState('')
+    const [data, setData] = useState({
+        email: '',
+        password: '',
+        name: '',
+        lastName: ''
     })
-   // if (data.password !== password) return alert("şifreler eşleşmiyor")
-  /*  if (!validator.isStrongPassword(data.password, {
-        minLength: 5,
-        minUppercase: 0,
-        minLowercase: 0,
-        minSymbols: 0
-    })) return alert("şifre koşulları sağlamıyor")
 
-   */
     async function login() {
         if (!validator.isEmail(data.email)) return alert("email hatalı")
-       await axios.post('https://61c7a49f903185001754748c.mockapi.io/users',{email:data.email, password:data.password}).then(r => {
-           console.log(r)
-       }).catch(r => {
-           console.log(r)
-       })
+        await axios.get('https://61c7a49f903185001754748c.mockapi.io/users').then(response => {              //apiye istek atıp verileri getiriyorum
+            const userData = response.data.find(r => (r.email === data.email && r.password === data.password))   //gelen veriler kullanıcının girdiği verilere eşit ise verileri dönüyor
+            return userData ? navigate('/') : alert("Email veya şifre hatalı. Lütfen tekrar deneyiniz")          //giriş yaptıktan sonra hatalı değil ise landing page yönlendiriyorum
+        }).catch(response => {
+            console.log(response.status, "boom")
+        })
+    }
 
-
+    async function register() {
+        if (!validator.isEmail(data.email)) return alert("email hatalı")                                                //emaili, şifreyi ve birçok veriyi kontrol etmemizi sağlayan güzel bir paket
+        if (data.password === '' || data.name === '' || data.lastName === '') return alert("tüm alanları doldurun")
+        if (data.password !== password) return alert("şifreler eşleşmiyor")
+        if (!validator.isStrongPassword(data.password, {
+            minLength: 5,
+            minUppercase: 0,
+            minLowercase: 0,
+            minSymbols: 0
+        })) return alert("şifre koşulları sağlamıyor")
+        const response = await axios.get('https://61c7a49f903185001754748c.mockapi.io/users').then(response => {    //aynı email ile kayıt olunması diye kayıt olunacak emaili kontrol ediyorum
+            return response.data.find(r => (r.email === data.email))
+        })
+        if (response) return alert("email mevcut")
+        await axios.post('https://61c7a49f903185001754748c.mockapi.io/users', data).then(r =>                       //Kullanıcıyı kayıt edip landin page yönlendiriyor
+            r ?  navigate("/") : alert("BOOM")
+        )
     }
 
     return (
@@ -110,10 +122,11 @@ function LoginForm() {
                 <>
                     <p className={classes.lfTxt}>Forgot Password?</p>
                     <button className={classes.button} onClick={login}>Sign In</button>
-                    <p className={classes.lfTxt}>Don’t have an account yet? &nbsp; <a href="/register">Register for free</a></p>
+                    <p className={classes.lfTxt}>Don’t have an account yet? &nbsp; <a href="/register">Register for
+                        free</a></p>
                 </>
                 :
-                <button className={classes.button}>Sign Up</button>
+                <button className={classes.button} onClick={register}>Sign Up</button>
             }
 
         </div>
